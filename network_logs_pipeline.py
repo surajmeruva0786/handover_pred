@@ -24,7 +24,7 @@ from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # Reproducibility
 SEED = 42
@@ -32,6 +32,18 @@ np.random.seed(SEED)
 
 import tensorflow as tf
 tf.random.set_seed(SEED)
+
+# GPU configuration — enable memory growth to avoid OOM on RTX 4050 (6 GB)
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        print(f"[GPU] Using: {[g.name for g in gpus]}")
+    except RuntimeError as e:
+        print(f"[GPU] Config error: {e}")
+else:
+    print("[GPU] No GPU detected — running on CPU")
 
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, LSTM
