@@ -1,0 +1,141 @@
+
+============================================================
+STEP 1: DATA LOADING & PREPROCESSING
+============================================================
+Raw dataset  : 10570 rows × 15 cols
+Network types:
+NetworkType
+LTE (4G)          10301
+WCDMA (3G)           99
+GSM (2G)             98
+5G NR                60
+Not Registered       12
+
+After LTE-4G filter : 10301 rows
+After cleaning (valid RSRP + PCI) : 10301 rows
+Timespan : 2025-08-28 14:36:08.973000 to 2025-08-31 22:12:02.008000
+RSRP range: -129.0 to -60.0 dBm
+Unique PCI values: [2, 3, 5, 6, 8, 10, 12, 13, 14, 15, 17, 19, 22, 23, 25, 26, 28, 36, 37, 38, 44, 47, 48, 55, 56, 63, 68, 70, 73, 74, 75, 76, 78, 80, 81, 82, 83, 88, 95, 96, 98, 102, 103, 104, 112, 116, 117, 118, 125, 128, 139, 141, 142, 150, 151, 152, 157, 159, 160, 161, 165, 167, 168, 170, 178, 179, 185, 191, 194, 198, 199, 203, 205, 210, 213, 215, 218, 221, 232, 235, 240, 242, 246, 248, 251, 252, 258, 261, 264, 269, 275, 279, 280, 282, 285, 294, 300, 306, 307, 312, 313, 315, 316, 318, 319, 328, 329, 330, 339, 340, 351, 352, 353, 355, 357, 359, 361, 363, 366, 369, 370, 371, 380, 382, 383, 388, 392, 393, 395, 399, 401, 402, 403, 405, 406, 409, 411, 412, 415, 424, 430, 433, 434, 440, 441, 445, 446, 450, 451, 452, 453, 454, 455, 460, 464, 466, 474, 478, 479, 483, 484, 489, 492, 494, 496, 498, 499, 500, 502]
+
+Handover events (ho_trig=1) : 323
+No-HO samples (ho_trig=0)  : 9978
+HO rate                    : 3.14%
+Saved -> results/preprocessed_data.csv
+[Step 1 done in 0.4s]
+
+============================================================
+STEP 2: LSTM RSRP PREDICTION (STAGE 1)
+============================================================
+Train / Test split : 8240 / 2061 samples
+LSTM train shape : X(8140, 100, 1)  y(8140,)
+
+LSTM Model Summary:
+Model: "sequential"
++--------------------------------------------------------------------------+
+| Layer (type)                    | Output Shape           |       Param # |
+|---------------------------------+------------------------+---------------|
+| lstm (LSTM)                     | (None, 100, 120)       |        58,560 |
+|---------------------------------+------------------------+---------------|
+| dropout (Dropout)               | (None, 100, 120)       |             0 |
+|---------------------------------+------------------------+---------------|
+| lstm_1 (LSTM)                   | (None, 100, 50)        |        34,200 |
+|---------------------------------+------------------------+---------------|
+| dropout_1 (Dropout)             | (None, 100, 50)        |             0 |
+|---------------------------------+------------------------+---------------|
+| lstm_2 (LSTM)                   | (None, 100, 50)        |        20,200 |
+|---------------------------------+------------------------+---------------|
+| dropout_2 (Dropout)             | (None, 100, 50)        |             0 |
+|---------------------------------+------------------------+---------------|
+| lstm_3 (LSTM)                   | (None, 50)             |        20,200 |
+|---------------------------------+------------------------+---------------|
+| dropout_3 (Dropout)             | (None, 50)             |             0 |
+|---------------------------------+------------------------+---------------|
+| dense (Dense)                   | (None, 1)              |            51 |
++--------------------------------------------------------------------------+
+ Total params: 133,211 (520.36 KB)
+ Trainable params: 133,211 (520.36 KB)
+ Non-trainable params: 0 (0.00 B)
+
+
+Training stopped at epoch 20/100
+Best val_loss : 0.001393
+
+LSTM Test MAE  : 1.4427 dBm
+LSTM Test RMSE : 2.7585 dBm
+Saved -> results/lstm_model.keras
+Saved -> results/lstm_training_loss.png, results/lstm_rsrp_prediction.png
+[Step 2 done in 545.5s]
+
+============================================================
+STEP 3: BUILDING CLASSIFICATION DATASET
+============================================================
+Full-set predictions shape : (10201, 1)
+Classification dataset : X(10151, 50)  y(10151,)
+Class distribution (raw): Counter({np.int64(0): 9841, np.int64(1): 310})
+Saved -> results/classification_base.csv
+[Step 3 done in 8.2s]
+
+============================================================
+STEP 4: CLASS BALANCING (TOMEK LINKS + SMOTE)
+============================================================
+After Tomek Links : Counter({np.int64(0): 9802, np.int64(1): 310})
+After SMOTE       : Counter({np.int64(1): 9802, np.int64(0): 9802})
+Saved -> results/balanced_classification_base.csv
+[Step 4 done in 2.2s]
+
+============================================================
+STEP 5: BINARY CLASSIFICATION (STAGE 2)
+============================================================
+
+Running Random Forest (10×5-fold CV) ...
+
+[Random Forest]
+  Accuracy  : 0.9741 ± 0.0026
+  F1-Score  : 0.9746 ± 0.0025
+  Precision : 0.9586
+  Recall    : 0.9911
+  Confusion matrix (mean):
+  [[1876.52   83.88]
+ [  17.54 1942.86]]
+  [Random Forest done in 92.4s]
+
+Running SVM (RBF) (10×5-fold CV) ...
+
+[SVM (RBF)]
+  Accuracy  : 0.8824 ± 0.0053
+  F1-Score  : 0.8803 ± 0.0054
+  Precision : 0.8964
+  Recall    : 0.8649
+  Confusion matrix (mean):
+  [[1764.24  196.16]
+ [ 264.84 1695.56]]
+  [SVM (RBF) done in 1466.7s]
+
+Running MLP (10×5-fold CV) ...
+
+[MLP]
+  Accuracy  : 0.9509 ± 0.0039
+  F1-Score  : 0.9512 ± 0.0038
+  Precision : 0.9472
+  Recall    : 0.9552
+  Confusion matrix (mean):
+  [[1855.9   104.5 ]
+ [  87.82 1872.58]]
+  [MLP done in 2606.4s]
+
+Running KNN (10×5-fold CV) ...
+
+[KNN]
+  Accuracy  : 0.9690 ± 0.0024
+  F1-Score  : 0.9691 ± 0.0024
+  Precision : 0.9649
+  Recall    : 0.9734
+  Confusion matrix (mean):
+  [[1891.     69.4 ]
+ [  52.18 1908.22]]
+  [KNN done in 41.8s]
+
+============================================================
+STEP 6: RESULTS SUMMARY
+============================================================
+Saved -> results/results_summary.json
