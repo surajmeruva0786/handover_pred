@@ -52,7 +52,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-# ── Directories ────────────────────────────────────────
+# -- Directories ----------------------------------------
 os.makedirs('results', exist_ok=True)
 
 RESULTS = {}
@@ -66,9 +66,9 @@ def section(title):
     bar = "=" * 60
     log(f"\n{bar}\n{title}\n{bar}")
 
-# ══════════════════════════════════════════════════════
+# ======================================================
 # STEP 1 — Data Loading & Preprocessing
-# ══════════════════════════════════════════════════════
+# ======================================================
 section("STEP 1: DATA LOADING & PREPROCESSING")
 t0 = time.time()
 
@@ -108,7 +108,7 @@ df.sort_values('Timestamp', ascending=True, inplace=True)
 df.reset_index(drop=True, inplace=True)
 
 log(f"After cleaning (valid RSRP + PCI) : {len(df)} rows")
-log(f"Timespan : {df['Timestamp'].min()} → {df['Timestamp'].max()}")
+log(f"Timespan : {df['Timestamp'].min()} to {df['Timestamp'].max()}")
 log(f"RSRP range: {df['RSRP'].min():.1f} to {df['RSRP'].max():.1f} dBm")
 log(f"Unique PCI values: {sorted(df['PCI'].unique().tolist())}")
 
@@ -132,12 +132,12 @@ RESULTS['rsrp_min'] = float(df['RSRP'].min())
 RESULTS['rsrp_max'] = float(df['RSRP'].max())
 
 df.to_csv('results/preprocessed_data.csv', index=False)
-log("Saved → results/preprocessed_data.csv")
+log("Saved -> results/preprocessed_data.csv")
 log(f"[Step 1 done in {time.time()-t0:.1f}s]")
 
-# ══════════════════════════════════════════════════════
+# ======================================================
 # STEP 2 — LSTM RSRP Prediction  (Stage 1)
-# ══════════════════════════════════════════════════════
+# ======================================================
 section("STEP 2: LSTM RSRP PREDICTION (STAGE 1)")
 t0 = time.time()
 
@@ -166,7 +166,7 @@ X_train = np.array(X_train).reshape(-1, LOOKBACK, 1)
 y_train = np.array(y_train)
 log(f"LSTM train shape : X{X_train.shape}  y{y_train.shape}")
 
-# ── LSTM Architecture (from paper) ────────────────────
+# -- LSTM Architecture (from paper) --------------------
 #   Layer 1 : LSTM(120)  + Dropout(0.3)
 #   Layer 2 : LSTM(50)   + Dropout(0.3)
 #   Layer 3 : LSTM(50)   + Dropout(0.3)
@@ -205,7 +205,7 @@ actual_epochs = len(history.history['loss'])
 log(f"\nTraining stopped at epoch {actual_epochs}/{EPOCHS}")
 log(f"Best val_loss : {min(history.history['val_loss']):.6f}")
 
-# ── Test set evaluation ────────────────────────────────
+# -- Test set evaluation --------------------------------
 inputs_test = rsrp_norm[n_train - LOOKBACK:]
 X_test = []
 for i in range(LOOKBACK, len(inputs_test)):
@@ -229,7 +229,7 @@ RESULTS['lstm_test_samples'] = int(X_test.shape[0])
 
 # Save model
 model.save('results/lstm_model.keras')
-log("Saved → results/lstm_model.keras")
+log("Saved -> results/lstm_model.keras")
 
 # Training loss plot
 plt.figure(figsize=(8, 4))
@@ -256,12 +256,12 @@ plt.grid(True)
 plt.tight_layout()
 plt.savefig('results/lstm_rsrp_prediction.png', dpi=150)
 plt.close()
-log("Saved → results/lstm_training_loss.png, results/lstm_rsrp_prediction.png")
+log("Saved -> results/lstm_training_loss.png, results/lstm_rsrp_prediction.png")
 log(f"[Step 2 done in {time.time()-t0:.1f}s]")
 
-# ══════════════════════════════════════════════════════
+# ======================================================
 # STEP 3 — Build Classification Feature Dataset
-# ══════════════════════════════════════════════════════
+# ======================================================
 section("STEP 3: BUILDING CLASSIFICATION DATASET")
 t0 = time.time()
 
@@ -277,7 +277,7 @@ ho_all        = ho_trig[LOOKBACK:]                         # aligned labels
 
 log(f"Full-set predictions shape : {pred_all.shape}")
 
-# Sliding 50-sample window of LSTM predictions → one feature vector per window
+# Sliding 50-sample window of LSTM predictions -> one feature vector per window
 WINDOW = 50
 X_cls, y_cls = [], []
 for i in range(WINDOW, len(pred_all)):
@@ -292,12 +292,12 @@ log(f"Class distribution (raw): {Counter(y_cls)}")
 cls_df = pd.DataFrame(X_cls)
 cls_df['label'] = y_cls
 cls_df.to_csv('results/classification_base.csv', index=False)
-log("Saved → results/classification_base.csv")
+log("Saved -> results/classification_base.csv")
 log(f"[Step 3 done in {time.time()-t0:.1f}s]")
 
-# ══════════════════════════════════════════════════════
+# ======================================================
 # STEP 4 — Class Balancing (Tomek Links + SMOTE)
-# ══════════════════════════════════════════════════════
+# ======================================================
 section("STEP 4: CLASS BALANCING (TOMEK LINKS + SMOTE)")
 t0 = time.time()
 
@@ -334,12 +334,12 @@ X_bal_scaled = std_scaler.fit_transform(X_bal)
 bal_df = pd.DataFrame(X_bal_scaled)
 bal_df['label'] = y_bal
 bal_df.to_csv('results/balanced_classification_base.csv', index=False)
-log("Saved → results/balanced_classification_base.csv")
+log("Saved -> results/balanced_classification_base.csv")
 log(f"[Step 4 done in {time.time()-t0:.1f}s]")
 
-# ══════════════════════════════════════════════════════
+# ======================================================
 # STEP 5 — Binary Classification  (Stage 2)
-# ══════════════════════════════════════════════════════
+# ======================================================
 section("STEP 5: BINARY CLASSIFICATION (STAGE 2)")
 
 def run_classifier(name, clf, X, y, n_repeats=10, n_splits=5):
@@ -390,32 +390,32 @@ for clf_name, clf in classifiers.items():
 
 RESULTS['classification'] = cls_results
 
-# ══════════════════════════════════════════════════════
+# ======================================================
 # STEP 6 — Summary & Save
-# ══════════════════════════════════════════════════════
+# ======================================================
 section("STEP 6: RESULTS SUMMARY")
 
 with open('results/results_summary.json', 'w') as f:
     json.dump(RESULTS, f, indent=2)
-log("Saved → results/results_summary.json")
+log("Saved -> results/results_summary.json")
 
 with open('results/run_log.txt', 'w', encoding='utf-8') as f:
     f.write('\n'.join(LOG_LINES))
-log("Saved → results/run_log.txt")
+log("Saved -> results/run_log.txt")
 
-log("\n" + "─" * 60)
+log("\n" + "-" * 60)
 log("FINAL RESULTS")
-log("─" * 60)
-log(f"Dataset         : {RESULTS['raw_rows']} raw → {RESULTS['lte_rows']} LTE-4G samples")
+log("-" * 60)
+log(f"Dataset         : {RESULTS['raw_rows']} raw -> {RESULTS['lte_rows']} LTE-4G samples")
 log(f"Handover events : {RESULTS['handover_events']} ({RESULTS['handover_events']/RESULTS['lte_rows']*100:.2f}%)")
 log(f"LSTM MAE        : {RESULTS['lstm_mae']:.4f} dBm")
 log(f"LSTM RMSE       : {RESULTS['lstm_rmse']:.4f} dBm")
 log(f"LSTM Epochs     : {RESULTS['lstm_epochs']}")
 log("\nClassifier Results:")
 log(f"{'Classifier':<22} {'Accuracy':>10} {'F1':>8} {'Precision':>11} {'Recall':>8}")
-log("─" * 62)
+log("-" * 62)
 for cname, res in cls_results.items():
     log(f"{cname:<22} {res['accuracy_mean']:>10.4f} {res['f1_mean']:>8.4f}"
         f" {res['precision_mean']:>11.4f} {res['recall_mean']:>8.4f}")
-log("─" * 62)
+log("-" * 62)
 log("\nPipeline complete.")
