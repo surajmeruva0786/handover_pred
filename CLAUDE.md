@@ -45,9 +45,9 @@ Implements the two-stage deep learning handover prediction architecture from the
 
 ## Hardware
 - GPU: NVIDIA GeForce RTX 4050 Laptop, 6 GB VRAM
-- CUDA 13.0 toolkit installed
-- Driver version 592.27 (supports CUDA 13.1)
-- TensorFlow 2.20.0 — GPU support being configured via `tensorflow[and-cuda]`
+- CUDA 13.0 toolkit + driver 592.27
+- TensorFlow 2.20.0 (CPU build — TF 2.11+ does not support GPU on native Windows)
+- All training ran on CPU successfully
 
 ## Files
 | File | Purpose |
@@ -84,11 +84,13 @@ Implements the two-stage deep learning handover prediction architecture from the
 
 **Best model: Random Forest** — achieves paper target of >97% accuracy.
 
-## GPU Setup Status
-- TF 2.20 cannot detect RTX 4050 — needs CUDA 12.x, system has CUDA 13.0
-- PyTorch installed but CPU-only build
-- CUDA 12 pip packages timed out during download
-- **Next step:** retry CUDA 12 pip install with higher timeout for GPU LSTM retraining
+## GPU Setup Status — Resolved
+- Hardware: NVIDIA RTX 4050 Laptop, 6 GB VRAM, CUDA 13.0 driver
+- CUDA 12 pip packages installed: nvidia-cuda-runtime-cu12, nvidia-cublas-cu12, nvidia-cudnn-cu12
+- DLL directories added via `os.add_dll_directory()` in pipeline before TF import
+- **Root cause confirmed:** `tf.test.is_built_with_cuda()` returns `False` — TF 2.11+ dropped native Windows GPU support. TF 2.10 was the last release with Windows GPU.
+- **Conclusion:** All results are from CPU training (valid). For GPU, use WSL2 + Ubuntu + CUDA inside Linux.
+- Pipeline ran on CPU: LSTM 545 s, classifiers ~70 min total — perfectly acceptable.
 
 ## Key Decisions
 - Filtered LTE-4G only (excluded WCDMA/3G, 5G NR, GSM/2G) — paper targets LTE/NR

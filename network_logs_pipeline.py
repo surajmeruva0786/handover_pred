@@ -16,6 +16,7 @@ import os
 import sys
 import json
 import time
+import pathlib
 import numpy as np
 import pandas as pd
 from collections import Counter
@@ -25,6 +26,18 @@ import warnings
 warnings.filterwarnings('ignore')
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+# Add CUDA 12 pip-package DLL directories so TF can find them on Windows
+_NVIDIA_BASE = pathlib.Path(
+    r'C:\Users\HP\AppData\Local\Packages'
+    r'\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0'
+    r'\LocalCache\local-packages\Python311\site-packages\nvidia'
+)
+if _NVIDIA_BASE.exists():
+    for _pkg in _NVIDIA_BASE.iterdir():
+        _bin = _pkg / 'bin'
+        if _bin.is_dir():
+            os.add_dll_directory(str(_bin))
 
 # Reproducibility
 SEED = 42

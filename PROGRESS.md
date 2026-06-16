@@ -178,16 +178,21 @@ The paper's target of >97% accuracy is **achieved** with Random Forest. The high
 
 ---
 
-## GPU Setup Status
+## GPU Setup Status — Final Diagnosis
 
 | Step | Status |
 |------|--------|
-| Hardware detected | NVIDIA RTX 4050 Laptop, 6 GB VRAM |
+| Hardware | NVIDIA RTX 4050 Laptop, 6 GB VRAM |
 | CUDA toolkit installed | CUDA 13.0 (nvcc v13.0) |
-| TF GPU detection | Not working — TF 2.20 needs CUDA 12.x, system has CUDA 13.0 |
-| PyTorch GPU | CPU-only build installed |
-| CUDA 12 pip packages | Download timed out |
-| Next step | Install CUDA 12 runtime libs (retry with higher timeout) |
+| CUDA 12 pip packages | Installed: nvidia-cuda-runtime-cu12, nvidia-cublas-cu12, nvidia-cudnn-cu12 |
+| DLL path fix | Added via `os.add_dll_directory()` for all nvidia/*/bin dirs |
+| TF CUDA build | `tf.test.is_built_with_cuda()` returns **False** |
+| Root cause | **TF 2.11+ dropped native Windows GPU support.** TF 2.10 was the last version with Windows GPU. TF 2.11+ requires WSL2 for NVIDIA GPU acceleration on Windows. |
+| Workaround | For GPU training on this system, use WSL2 + TF with CUDA inside the Linux layer |
+| Run 1 training | Completed on CPU — LSTM: 545 s (~9 min), all classifiers: ~4211 s total |
+
+> **Note:** The pipeline results are complete and fully valid. GPU would only speed up retraining.
+> To enable GPU: install WSL2, set up Ubuntu + CUDA toolkit, run the pipeline there.
 
 ---
 
@@ -198,4 +203,4 @@ The paper's target of >97% accuracy is **achieved** with Random Forest. The high
 | `5c43c66` | Add two-stage handover prediction pipeline and PROGRESS.md |
 | `7a0fd49` | Add CLAUDE.md project context and update PROGRESS.md |
 | `e4ab5c6` | Enable GPU memory growth for RTX 4050 in pipeline |
-| _(next)_ | Update PROGRESS.md with Run 1 results + GPU retry |
+| _(latest)_ | Fix GPU DLL path, document TF Windows GPU limitation, finalize Run 1 |
