@@ -64,10 +64,31 @@ Implements the two-stage deep learning handover prediction architecture from the
 | `results/results_summary.json` | All metrics in machine-readable format |
 | `results/run_log.txt` | Full console output of last pipeline run |
 
-## Run Status
-- **LSTM training**: Completed — 20 epochs (best at 10), val_loss=0.0017 MAE~0.025 dBm (normalized)
-- **Classification**: Running as of 2026-06-16 ~13:00 IST — on full post-SMOTE balanced dataset
-- **GPU for LSTM**: Installing tensorflow[and-cuda] for RTX 4050 support
+## Run 1 Results (completed 2026-06-16)
+
+### LSTM Stage
+| Metric | Value |
+|--------|-------|
+| Epochs (early stopped) | 20 (best at epoch 10) |
+| Best val_loss | 0.001393 |
+| Test MAE | **1.4427 dBm** |
+| Test RMSE | **2.7585 dBm** |
+
+### Classification Stage (10×5-fold CV on 19,604 balanced samples)
+| Classifier | Accuracy | F1 | Recall |
+|------------|----------|----|--------|
+| **Random Forest** | **97.41%** | **97.46%** | **99.11%** |
+| KNN | 96.90% | 96.91% | 97.34% |
+| MLP | 95.09% | 95.12% | 95.52% |
+| SVM (RBF) | 88.24% | 88.03% | 86.49% |
+
+**Best model: Random Forest** — achieves paper target of >97% accuracy.
+
+## GPU Setup Status
+- TF 2.20 cannot detect RTX 4050 — needs CUDA 12.x, system has CUDA 13.0
+- PyTorch installed but CPU-only build
+- CUDA 12 pip packages timed out during download
+- **Next step:** retry CUDA 12 pip install with higher timeout for GPU LSTM retraining
 
 ## Key Decisions
 - Filtered LTE-4G only (excluded WCDMA/3G, 5G NR, GSM/2G) — paper targets LTE/NR
