@@ -1,7 +1,7 @@
 # Handover Prediction — Project Context for Claude
 
 ## What This Project Does
-Implements the two-stage deep learning handover prediction architecture from the IEEE paper (`AS_JNL_IEEE_iDecide_Backup_1.pdf`) applied to real-world drive-test network logs (`network_logs_1.csv`).
+Implements the i-DECIDE two-stage deep learning handover prediction architecture from the IEEE paper (`AS_JNL_IEEE_iDecide_Backup_1.pdf`) applied to a real-world drive-test LTE measurement log (`network_logs_1.csv`).
 
 ## User Preferences
 - **No time restrictions** — always run on full dataset, never subsample or approximate
@@ -9,7 +9,7 @@ Implements the two-stage deep learning handover prediction architecture from the
 - **GPU training** — use RTX 4050 (6 GB VRAM, CUDA 13.0) whenever possible
 - **Document everything** — update PROGRESS.md and this file with every meaningful change, result, or decision
 
-## Architecture (from paper)
+## Architecture (from i-DECIDE paper)
 
 ### Stage 1 — LSTM RSRP Regression
 | Component | Value |
@@ -22,8 +22,9 @@ Implements the two-stage deep learning handover prediction architecture from the
 | Output | Dense(1, linear) |
 | Optimizer | RMSprop |
 | Loss | MSE |
-| Epochs | 100 (EarlyStopping patience=10) |
+| Epochs | 100 max (EarlyStopping patience=10) |
 | Batch size | 128 |
+| Total params | 133,691 |
 
 ### Stage 2 — Binary Classification
 | Component | Value |
@@ -53,8 +54,12 @@ Implements the two-stage deep learning handover prediction architecture from the
 | File | Purpose |
 |------|---------|
 | `network_logs_pipeline.py` | Main end-to-end pipeline (run this) |
-| `PROGRESS.md` | Detailed training log and results |
+| `PROGRESS.md` | Full training log, results, and commit history |
 | `CLAUDE.md` | This file — project context for Claude |
+| `README.md` | Project overview for GitHub |
+| `paper/main.tex` | IEEE journal paper (LaTeX source) |
+| `paper/lstm_training_loss.png` | Paper figure: LSTM loss curve |
+| `paper/lstm_rsrp_prediction.png` | Paper figure: real vs predicted RSRP |
 | `results/preprocessed_data.csv` | Cleaned LTE-4G data with ho_trig labels |
 | `results/classification_base.csv` | Raw 50-window classification features |
 | `results/balanced_classification_base.csv` | Post Tomek+SMOTE balanced features |
@@ -78,11 +83,18 @@ Implements the two-stage deep learning handover prediction architecture from the
 | Classifier | Accuracy | F1 | Recall |
 |------------|----------|----|--------|
 | **Random Forest** | **97.41%** | **97.46%** | **99.11%** |
-| KNN | 96.90% | 96.91% | 97.34% |
-| MLP | 95.09% | 95.12% | 95.52% |
-| SVM (RBF) | 88.24% | 88.03% | 86.49% |
+| KNN (k=2) | 96.90% | 96.91% | 97.34% |
+| MLP (120-120) | 95.09% | 95.12% | 95.52% |
+| SVM (RBF, C=500) | 88.24% | 88.03% | 86.49% |
 
-**Best model: Random Forest** — achieves paper target of >97% accuracy.
+**Best model: Random Forest** — highest accuracy and recall; only 17.5 missed HO events per fold.
+
+## Paper (completed 2026-06-17)
+- File: `paper/main.tex` — complete IEEE Transactions-format paper
+- Sections: Introduction, Dataset, i-DECIDE Architecture, Experimental Setup, Results, Conclusion
+- Figures: TikZ architecture diagram, pgfplots classifier bar chart, 2 PNG result figures
+- Known fix: architecture TikZ figure wrapped in `\resizebox{\linewidth}{!}` to prevent overflow
+- Compile: upload `paper/` folder (3 files) to Overleaf → Compile
 
 ## GPU Setup Status — Resolved
 - Hardware: NVIDIA RTX 4050 Laptop, 6 GB VRAM, CUDA 13.0 driver
@@ -90,11 +102,12 @@ Implements the two-stage deep learning handover prediction architecture from the
 - DLL directories added via `os.add_dll_directory()` in pipeline before TF import
 - **Root cause confirmed:** `tf.test.is_built_with_cuda()` returns `False` — TF 2.11+ dropped native Windows GPU support. TF 2.10 was the last release with Windows GPU.
 - **Conclusion:** All results are from CPU training (valid). For GPU, use WSL2 + Ubuntu + CUDA inside Linux.
-- Pipeline ran on CPU: LSTM 545 s, classifiers ~70 min total — perfectly acceptable.
+- Pipeline ran on CPU: LSTM 545 s, classifiers ~70 min total — acceptable.
 
 ## Key Decisions
-- Filtered LTE-4G only (excluded WCDMA/3G, 5G NR, GSM/2G) — paper targets LTE/NR
+- Filtered LTE-4G only (excluded WCDMA/3G, 5G NR, GSM/2G) — i-DECIDE targets LTE RSRP
 - Sorted timestamps ascending (raw data was newest-first)
-- Used EarlyStopping (patience=10) to prevent overfitting while respecting 100-epoch max
-- SMOTE k_neighbors set dynamically based on minority class size
+- Used EarlyStopping (patience=10) to prevent overfitting within the 100-epoch max
+- SMOTE k_neighbors set dynamically based on minority class size after Tomek
 - All 4 classifiers evaluated at 10×5-fold CV as per paper (no shortcuts)
+- Paper framed as standalone i-DECIDE implementation on this dataset (no prior-work comparison tables)
