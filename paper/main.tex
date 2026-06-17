@@ -257,21 +257,22 @@ the full pipeline.
 
 \begin{figure*}[!t]
 \centering
-\begin{tikzpicture}[node distance=0.9cm]
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[node distance=0.75cm]
 
 % Row 1 — Stage 1
 \node[blk] (raw)    {Raw RSRP\\Series $x_t$};
-\node[blk, right=1.0cm of raw]   (pre)  {Preprocess\\Filter + Sort};
-\node[blk, right=0.9cm of pre]   (win1) {Sliding\\Window\\$L=100$};
-\node[wblk, right=0.9cm of win1] (lstm) {Stacked LSTM\\120-50-50-50\\Dropout 0.3};
-\node[blk, right=0.9cm of lstm]  (hat)  {RSRP\\Predictions\\$\hat{x}_{t+1}$};
+\node[blk, right=0.8cm of raw]   (pre)  {Preprocess\\Filter + Sort};
+\node[blk, right=0.8cm of pre]   (win1) {Sliding\\Window\\$L=100$};
+\node[wblk, right=0.8cm of win1] (lstm) {Stacked LSTM\\120-50-50-50\\Dropout 0.3};
+\node[blk, right=0.8cm of lstm]  (hat)  {RSRP\\Predictions\\$\hat{x}_{t+1}$};
 
-% Row 2 — Stage 2
-\node[blk, below=1.8cm of win1] (win2) {Feature\\Window\\$W=50$};
-\node[oblk, right=0.9cm of win2] (bal)  {Tomek Links\\$\to$ SMOTE};
-\node[oblk, right=0.9cm of bal]  (scl)  {Standard\\Scaler};
-\node[rblk, right=0.9cm of scl]  (clf)  {Classifier\\RF / SVM\\MLP / KNN};
-\node[blk,  right=0.9cm of clf]  (out)  {HO\\Prediction\\$\hat{y}\in\{0,1\}$};
+% Row 2 — Stage 2 (anchored below win1 to stay inside Stage 1 width)
+\node[blk,  below=2.0cm of win1] (win2) {Feature\\Window\\$W=50$};
+\node[oblk, right=0.8cm of win2] (bal)  {Tomek Links\\$\to$ SMOTE};
+\node[oblk, right=0.8cm of bal]  (scl)  {Standard\\Scaler};
+\node[rblk, right=0.8cm of scl]  (clf)  {Classifier\\RF / SVM\\MLP / KNN};
+\node[blk,  right=0.8cm of clf]  (out)  {HO\\Prediction\\$\hat{y}\in\{0,1\}$};
 
 % Arrows — Stage 1
 \draw[arr] (raw)  -- (pre);
@@ -279,8 +280,8 @@ the full pipeline.
 \draw[arr] (win1) -- (lstm);
 \draw[arr] (lstm) -- (hat);
 
-% Bridge Stage 1 -> Stage 2
-\draw[arr] (hat.south) -- ++(0,-0.5) -| (win2.north);
+% Bridge Stage 1 to Stage 2
+\draw[arr] (hat.south) -- ++(0,-0.6) -| (win2.north);
 
 % Arrows — Stage 2
 \draw[arr] (win2) -- (bal);
@@ -290,13 +291,14 @@ the full pipeline.
 
 % Stage bounding boxes
 \begin{scope}[on background layer]
-  \node[stgbox, fit=(pre)(win1)(lstm)(hat),
-        label=above:{\small\textbf{Stage 1 --- LSTM RSRP Regression}}] {};
+  \node[stgbox, fit=(raw)(pre)(win1)(lstm)(hat),
+        label=above:{\normalsize\textbf{Stage 1 --- LSTM RSRP Regression}}] {};
   \node[stgbox, fit=(win2)(bal)(scl)(clf)(out),
-        label=below:{\small\textbf{Stage 2 --- Binary Handover Classification}}] {};
+        label=below:{\normalsize\textbf{Stage 2 --- Binary Handover Classification}}] {};
 \end{scope}
 
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \caption{i-DECIDE two-stage pipeline. Stage~1: stacked LSTM trained on
 100-sample RSRP windows predicts $\hat{x}_{t+1}$. Stage~2: 50-sample
 windows of LSTM predictions, balanced via Tomek Links + SMOTE and
