@@ -15,127 +15,102 @@ After LTE-4G filter : 10301 rows
 After cleaning (valid RSRP + PCI) : 10301 rows
 Timespan : 2025-08-28 14:36:08.973000 to 2025-08-31 22:12:02.008000
 RSRP range: -129.0 to -60.0 dBm
-Unique PCI values: [2, 3, 5, 6, 8, 10, 12, 13, 14, 15, 17, 19, 22, 23, 25, 26, 28, 36, 37, 38, 44, 47, 48, 55, 56, 63, 68, 70, 73, 74, 75, 76, 78, 80, 81, 82, 83, 88, 95, 96, 98, 102, 103, 104, 112, 116, 117, 118, 125, 128, 139, 141, 142, 150, 151, 152, 157, 159, 160, 161, 165, 167, 168, 170, 178, 179, 185, 191, 194, 198, 199, 203, 205, 210, 213, 215, 218, 221, 232, 235, 240, 242, 246, 248, 251, 252, 258, 261, 264, 269, 275, 279, 280, 282, 285, 294, 300, 306, 307, 312, 313, 315, 316, 318, 319, 328, 329, 330, 339, 340, 351, 352, 353, 355, 357, 359, 361, 363, 366, 369, 370, 371, 380, 382, 383, 388, 392, 393, 395, 399, 401, 402, 403, 405, 406, 409, 411, 412, 415, 424, 430, 433, 434, 440, 441, 445, 446, 450, 451, 452, 453, 454, 455, 460, 464, 466, 474, 478, 479, 483, 484, 489, 492, 494, 496, 498, 499, 500, 502]
 
 Handover events (ho_trig=1) : 323
 No-HO samples (ho_trig=0)  : 9978
 HO rate                    : 3.14%
 Saved -> results/preprocessed_data.csv
-[Step 1 done in 0.4s]
+[Step 1 done in 0.2s]
 
 ============================================================
 STEP 2: LSTM RSRP PREDICTION (STAGE 1)
 ============================================================
 Train / Test split : 8240 / 2061 samples
-LSTM train shape : X(8140, 100, 1)  y(8140,)
-
-LSTM Model Summary:
-Model: "sequential"
-+--------------------------------------------------------------------------+
-| Layer (type)                    | Output Shape           |       Param # |
-|---------------------------------+------------------------+---------------|
-| lstm (LSTM)                     | (None, 100, 120)       |        58,560 |
-|---------------------------------+------------------------+---------------|
-| dropout (Dropout)               | (None, 100, 120)       |             0 |
-|---------------------------------+------------------------+---------------|
-| lstm_1 (LSTM)                   | (None, 100, 50)        |        34,200 |
-|---------------------------------+------------------------+---------------|
-| dropout_1 (Dropout)             | (None, 100, 50)        |             0 |
-|---------------------------------+------------------------+---------------|
-| lstm_2 (LSTM)                   | (None, 100, 50)        |        20,200 |
-|---------------------------------+------------------------+---------------|
-| dropout_2 (Dropout)             | (None, 100, 50)        |             0 |
-|---------------------------------+------------------------+---------------|
-| lstm_3 (LSTM)                   | (None, 50)             |        20,200 |
-|---------------------------------+------------------------+---------------|
-| dropout_3 (Dropout)             | (None, 50)             |             0 |
-|---------------------------------+------------------------+---------------|
-| dense (Dense)                   | (None, 1)              |            51 |
-+--------------------------------------------------------------------------+
- Total params: 133,211 (520.36 KB)
- Trainable params: 133,211 (520.36 KB)
- Non-trainable params: 0 (0.00 B)
-
-
-Training stopped at epoch 20/100
-Best val_loss : 0.001393
+Loading pre-trained LSTM model from results/lstm_model.keras...
 
 LSTM Test MAE  : 1.4427 dBm
 LSTM Test RMSE : 2.7585 dBm
-Saved -> results/lstm_model.keras
-Saved -> results/lstm_training_loss.png, results/lstm_rsrp_prediction.png
-[Step 2 done in 545.5s]
 
 ============================================================
-STEP 3: BUILDING CLASSIFICATION DATASET
+STEP 3: BUILDING CLASSIFICATION DATASETS
 ============================================================
 Full-set predictions shape : (10201, 1)
-Classification dataset : X(10151, 50)  y(10151,)
-Class distribution (raw): Counter({np.int64(0): 9841, np.int64(1): 310})
-Saved -> results/classification_base.csv
-[Step 3 done in 8.2s]
+Default Dataset (lead_time = 1s):
+  Standard i-DECIDE features: (10151, 50)
+  PG-iDECIDE features       : (10151, 140)
+  Labels shape              : (10151,)
+  Class distribution        : Counter({np.int64(0): 9841, np.int64(1): 310})
+Saved base features -> results/classification_base.csv, results/balanced_classification_base.csv
 
 ============================================================
-STEP 4: CLASS BALANCING (TOMEK LINKS + SMOTE)
-============================================================
-After Tomek Links : Counter({np.int64(0): 9802, np.int64(1): 310})
-After SMOTE       : Counter({np.int64(1): 9802, np.int64(0): 9802})
-Saved -> results/balanced_classification_base.csv
-[Step 4 done in 2.2s]
-
-============================================================
-STEP 5: BINARY CLASSIFICATION (STAGE 2)
+STEP 4: EVALUATION PROTOCOL SETUP
 ============================================================
 
-Running Random Forest (10×5-fold CV) ...
+============================================================
+STEP 5: RUNNING MAIN EVALUATIONS (LEAD TIME = 1S)
+============================================================
 
-[Random Forest]
-  Accuracy  : 0.9741 ± 0.0026
-  F1-Score  : 0.9746 ± 0.0025
-  Precision : 0.9586
-  Recall    : 0.9911
-  Confusion matrix (mean):
-  [[1876.52   83.88]
- [  17.54 1942.86]]
-  [Random Forest done in 92.4s]
+Evaluating Rule-based A3-like Threshold Predictor (10x5-fold)...
+Rule-based A3 (Serving RSRP Threshold) Done: F1 = 0.0544, Recall = 0.6797. Optimal theta mean: -89.3 dBm, D mean: 1.1 s
 
-Running SVM (RBF) (10×5-fold CV) ...
+Evaluating Baseline i-DECIDE (50 features)...
+  Random Forest          Done in 87.0s | F1 = 0.2905 | Recall = 0.4071
+  KNN                    Done in 29.2s | F1 = 0.2891 | Recall = 0.3519
+  MLP                    Done in 399.7s | F1 = 0.2318 | Recall = 0.4661
+  SVM (RBF)              Done in 580.0s | F1 = 0.1599 | Recall = 0.5810
+  Logistic Regression    Done in 21.5s | F1 = 0.0770 | Recall = 0.5223
 
-[SVM (RBF)]
-  Accuracy  : 0.8824 ± 0.0053
-  F1-Score  : 0.8803 ± 0.0054
-  Precision : 0.8964
-  Recall    : 0.8649
-  Confusion matrix (mean):
-  [[1764.24  196.16]
- [ 264.84 1695.56]]
-  [SVM (RBF) done in 1466.7s]
-
-Running MLP (10×5-fold CV) ...
-
-[MLP]
-  Accuracy  : 0.9509 ± 0.0039
-  F1-Score  : 0.9512 ± 0.0038
-  Precision : 0.9472
-  Recall    : 0.9552
-  Confusion matrix (mean):
-  [[1855.9   104.5 ]
- [  87.82 1872.58]]
-  [MLP done in 2606.4s]
-
-Running KNN (10×5-fold CV) ...
-
-[KNN]
-  Accuracy  : 0.9690 ± 0.0024
-  F1-Score  : 0.9691 ± 0.0024
-  Precision : 0.9649
-  Recall    : 0.9734
-  Confusion matrix (mean):
-  [[1891.     69.4 ]
- [  52.18 1908.22]]
-  [KNN done in 41.8s]
+Evaluating Proposed PG-iDECIDE (140 features)...
+  Random Forest          Done in 250.1s | F1 = 0.2929 | Recall = 0.3623
+  KNN                    Done in 313.6s | F1 = 0.2904 | Recall = 0.3535
+  MLP                    Done in 330.6s | F1 = 0.2424 | Recall = 0.3313
+  SVM (RBF)              Done in 438.9s | F1 = 0.2139 | Recall = 0.3258
+  Logistic Regression    Done in 44.6s | F1 = 0.1419 | Recall = 0.5452
 
 ============================================================
-STEP 6: RESULTS SUMMARY
+STEP 6: STATISTICAL SIGNIFICANCE TESTING
+============================================================
+PG-RF vs Rule-based A3       : Mean diff = +23.85% | 95% CI = [22.84%, 24.86%] | t-p = 1.0962e-42 | Wilcoxon-p = 1.7764e-15
+PG-RF vs Std-Random Forest   : Mean diff = +0.24% | 95% CI = [-0.58%, 1.06%] | t-p = 5.6297e-01 | Wilcoxon-p = 5.6898e-01
+PG-RF vs Std-KNN             : Mean diff = +0.38% | 95% CI = [-0.54%, 1.29%] | t-p = 4.1264e-01 | Wilcoxon-p = 4.5729e-01
+PG-RF vs Std-MLP             : Mean diff = +6.10% | 95% CI = [5.18%, 7.03%] | t-p = 7.5418e-18 | Wilcoxon-p = 1.9540e-13
+PG-RF vs Std-SVM (RBF)       : Mean diff = +13.29% | 95% CI = [12.31%, 14.27%] | t-p = 3.2213e-31 | Wilcoxon-p = 1.7764e-15
+PG-RF vs Std-Logistic Regression: Mean diff = +21.59% | 95% CI = [20.51%, 22.67%] | t-p = 3.3801e-39 | Wilcoxon-p = 1.7764e-15
+PG-RF vs PG-KNN              : Mean diff = +0.25% | 95% CI = [-0.62%, 1.12%] | t-p = 5.6804e-01 | Wilcoxon-p = 7.2326e-01
+PG-RF vs PG-MLP              : Mean diff = +5.05% | 95% CI = [4.06%, 6.04%] | t-p = 9.0365e-14 | Wilcoxon-p = 8.8818e-15
+PG-RF vs PG-SVM (RBF)        : Mean diff = +7.90% | 95% CI = [6.75%, 9.05%] | t-p = 1.8201e-18 | Wilcoxon-p = 3.5527e-15
+PG-RF vs PG-Logistic Regression: Mean diff = +15.09% | 95% CI = [14.04%, 16.14%] | t-p = 1.9037e-32 | Wilcoxon-p = 1.7764e-15
+
+============================================================
+STEP 7: PREDICTION LEAD-TIME SWEEP
+============================================================
+
+Evaluating Lead Time = 1s ...
+  Rule-based A3          | F1 = 0.0544 | Recall = 0.6797
+  LR (PG-iDECIDE)        | F1 = 0.1419 | Recall = 0.5452
+  Standard i-DECIDE (RF) | F1 = 0.2905 | Recall = 0.4071
+  PG-iDECIDE (RF)        | F1 = 0.2929 | Recall = 0.3623
+
+Evaluating Lead Time = 2s ...
+  Rule-based A3          | F1 = 0.0536 | Recall = 0.6881
+  LR (PG-iDECIDE)        | F1 = 0.1389 | Recall = 0.5342
+  Standard i-DECIDE (RF) | F1 = 0.2917 | Recall = 0.4084
+  PG-iDECIDE (RF)        | F1 = 0.2927 | Recall = 0.3619
+
+Evaluating Lead Time = 3s ...
+  Rule-based A3          | F1 = 0.0534 | Recall = 0.7701
+  LR (PG-iDECIDE)        | F1 = 0.1361 | Recall = 0.5333
+  Standard i-DECIDE (RF) | F1 = 0.2912 | Recall = 0.4065
+  PG-iDECIDE (RF)        | F1 = 0.2903 | Recall = 0.3596
+
+Evaluating Lead Time = 5s ...
+  Rule-based A3          | F1 = 0.0545 | Recall = 0.8214
+  LR (PG-iDECIDE)        | F1 = 0.1256 | Recall = 0.5282
+  Standard i-DECIDE (RF) | F1 = 0.2804 | Recall = 0.3909
+  PG-iDECIDE (RF)        | F1 = 0.2846 | Recall = 0.3498
+Saved -> results/lead_time_vs_performance.png, paper/lead_time_vs_performance.png
+
+============================================================
+STEP 8: RESULTS SUMMARY
 ============================================================
 Saved -> results/results_summary.json

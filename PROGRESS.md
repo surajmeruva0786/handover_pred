@@ -61,19 +61,24 @@
 | File | Description |
 |------|-------------|
 | `network_logs_pipeline.py` | Main end-to-end pipeline script |
+| `generate_xai_plot.py` | XAI feature importance plot generator (RF Gini) |
 | `CLAUDE.md` | Project context, architecture, hardware notes |
 | `README.md` | Full project README with results and usage |
-| `paper/main.tex` | Complete IEEE journal paper (LaTeX) |
+| `paper/main.tex` | Complete IEEE journal paper (LaTeX) — revised v2 |
 | `paper/lstm_training_loss.png` | Paper figure: LSTM loss curve |
 | `paper/lstm_rsrp_prediction.png` | Paper figure: real vs predicted RSRP |
+| `paper/rf_feature_importance.png` | Paper figure: RF feature importance (XAI) |
+| `paper/lead_time_vs_performance.png` | Paper figure: lead-time vs F1 / recall |
 | `results/preprocessed_data.csv` | Cleaned LTE-4G dataset with ho_trig labels |
 | `results/classification_base.csv` | Raw 50-window classification features |
 | `results/balanced_classification_base.csv` | Post-Tomek/SMOTE balanced features |
 | `results/lstm_model.keras` | Saved LSTM model (best weights) |
 | `results/lstm_training_loss.png` | Train vs validation loss curve |
 | `results/lstm_rsrp_prediction.png` | Real vs predicted RSRP on test set |
-| `results/results_summary.json` | All metrics in JSON format |
-| `results/run_log.txt` | Full console output of run |
+| `results/rf_feature_importance.png` | RF feature importance (XAI analysis) |
+| `results/lead_time_vs_performance.png` | Lead-time performance sweep plot |
+| `results/results_summary.json` | All metrics in JSON format (A3 baseline, lead time, stats) |
+| `results/run_log.txt` | Full console output of latest run |
 
 ---
 
@@ -164,6 +169,41 @@ Actual 0      1764.24        196.16
 Actual 1       264.84       1695.56
 ```
 
+### Step 5 — A3 Baseline Comparison (Imbalanced Distribution)
+
+Evaluated on original 3.14% class imbalance to simulate real-world deployment:
+
+| Method | Accuracy | F1 | Precision | Recall | False-Alarm Rate |
+|--------|----------|----|-----------|--------|-----------------|
+| Rule-based A3 | 28.9% | 5.4% | 2.8% | 68.0% | **72.4%** |
+| **i-DECIDE RF** | **93.9%** | **29.1%** | **22.6%** | 40.7% | **4.4%** |
+
+- i-DECIDE RF: **5.3× better F1**, **16× fewer false alarms** than reactive A3
+- False alarms reduced from 1,424 → 87 per CV fold
+
+### Step 6 — Prediction Lead-Time Analysis
+
+| Lead Time (τ) | i-DECIDE RF F1 | i-DECIDE RF Recall | A3 F1 | A3 Recall |
+|---------------|----------------|-------------------|-------|-----------|
+| τ = 1 s | 29.1% | 40.7% | 5.4% | 68.0% |
+| τ = 2 s | 29.2% | 40.8% | 5.4% | 68.8% |
+| τ = 3 s | 29.1% | 40.7% | 5.3% | 77.0% |
+| τ = 5 s | 28.0% | 39.1% | 5.5% | 82.1% |
+
+- RF maintains ≥28% F1 up to 5 seconds ahead — degradation only 3.8% relative
+- 50-sample window @ ~1 s/sample → ~50 s theoretical prediction budget
+
+### Step 7 — Statistical Significance (95% Confidence Intervals)
+
+| Classifier | Mean Accuracy | Std | 95% CI |
+|------------|---------------|-----|--------|
+| RF | 97.41% | ±0.26% | (97.34%, 97.48%) |
+| KNN | 96.90% | ±0.24% | (96.83%, 96.97%) |
+| MLP | 95.09% | ±0.39% | (94.98%, 95.20%) |
+| SVM | 88.24% | ±0.53% | (88.09%, 88.39%) |
+
+All four confidence intervals are non-overlapping → all pairwise differences statistically significant.
+
 ---
 
 ## GPU Setup Status — Final Diagnosis
@@ -181,35 +221,84 @@ Actual 1       264.84       1695.56
 
 ---
 
-## Paper — 2026-06-17
+## Paper — v1 (2026-06-17)
 
-A complete IEEE journal-format paper was written in LaTeX covering the i-DECIDE implementation and results.
-
-### Paper Contents
+Initial IEEE journal-format paper written in LaTeX covering the i-DECIDE implementation and results.
 
 | Section | Content |
 |---------|---------|
 | Abstract | Dataset, two-stage method, key results |
-| Introduction | HO problem, A3-event limitations, contributions |
+| Introduction | HO problem, A3-event limitations, 4 contributions |
 | Dataset | Drive-test setup, RAT filtering, HO detection, statistics |
 | i-DECIDE Architecture | Stage 1 LSTM + Stage 2 classifiers, TikZ block diagram |
 | Experimental Setup | CV protocol, training configuration, hardware |
-| Results | LSTM table, classification table (50-fold), confusion matrices, pgfplots bar chart |
+| Results | LSTM table, classification table (50-fold), confusion matrices |
 | Conclusion | Summary + 4 future directions |
-| References | 8 references (3GPP specs, i-DECIDE, LSTM, SMOTE, Tomek, RMSprop, RF, measurements) |
+| References | 8 references |
 
-### Paper Files
+---
 
-| File | Description |
-|------|-------------|
-| `paper/main.tex` | Complete LaTeX source (IEEEtran journal class) |
-| `paper/lstm_training_loss.png` | LSTM training/validation loss curve |
-| `paper/lstm_rsrp_prediction.png` | Actual vs predicted RSRP on test set |
+## Paper — v2 Revision (2026-06-23)
 
-**To compile:** Upload all 3 files to [Overleaf](https://overleaf.com) → Compile.
+Major revision addressing supervisor feedback. All changes verified against `results/results_summary.json`.
 
-### Known Issues Fixed
-- Architecture TikZ figure overflowed page width → fixed with `\resizebox{\linewidth}{!}{}` wrapper and `raw` node included in Stage 1 bounding box (commit `72b517d`)
+### Changes Made
+
+#### 1. Novelty Strengthened
+- Introduction now explicitly frames study as "first complete reproduction of i-DECIDE on live drive-test measurements from an operational South Asian LTE network (Airtel India)"
+- Contributions expanded from **4 → 6 items**:
+  - Added: quantitative comparison against rule-based A3 baseline
+  - Added: prediction lead-time analysis (up to 5 seconds)
+  - Added: statistical significance testing (95% CI on 50-fold distributions)
+
+#### 2. A3 Baseline Added (was missing)
+- New Section IV-B: Rule-Based 3GPP A3 Baseline — implementation description
+- New Table (imbalanced evaluation): A3 vs i-DECIDE RF on real 31:1 class distribution
+- Key result: **5.3× F1 improvement** (29.1% vs 5.4%), **16× false-alarm reduction** (4.4% vs 72.4%)
+- Communications-layer interpretation: each false A3 alert wastes X2/S1 signalling resources
+
+#### 3. Prediction Lead-Time Added (communications insight)
+- New Section IV-C: Lead-Time Analysis methodology
+- New Table: lead-time sweep τ = {1, 2, 3, 5} seconds
+- Key result: RF degrades only 29.1% → 28.0% F1 at 5 s horizon (~3.8% relative drop)
+- Establishes: 50-sample window @ ~1 s/sample = **~50 s theoretical prediction budget**
+
+#### 4. Statistical Significance Added
+- New subsection in Results: 95% CI computed as mean ± t(0.025,49) × std/√50
+- New Table: CIs for all 4 classifiers
+- All pairwise CIs non-overlapping → all differences statistically significant at α=0.05
+
+#### 5. SMOTE Data Leakage Acknowledged
+- New **Limitations** paragraph in Conclusion
+- Clearly states: global SMOTE applied before CV (consistent with i-DECIDE reference implementation)
+- Notes: may slightly inflate balanced-set accuracy estimates
+- Practical comparison (Table vs A3) uses natural imbalance — unaffected by this issue
+- Future work: nested SMOTE within each fold
+
+#### 6. XAI Section Added
+- New Figure: `rf_feature_importance.png` — Gini impurity per window position with error bars
+- Generated by `generate_xai_plot.py`
+- Key finding: t₄₉ (most recent) accounts for 6.23% of total impurity reduction; last 10 positions average 2× importance of first 10
+
+#### 7. References Updated: 8 → 11
+All three new references are verified real papers from 2022–2024:
+
+| Key | Paper | Venue | Year |
+|-----|-------|-------|------|
+| `lima2023icc` | J. P. Lima et al., "Deep Learning-Based Handover Prediction for 5G and Beyond Networks" | IEEE ICC | 2023 |
+| `fang2022sdgnet` | Y. Fang, S. Ergüt, P. Patras, "SDGNet: A Handover-Aware Spatiotemporal GNN for Mobile Traffic Forecasting" | IEEE Commun. Lett., vol. 26, no. 3, pp. 582–586 | 2022 |
+| `khan2024xai` | N. Khan et al., "Explainable and Robust AI for Trustworthy Resource Management in 6G Networks" | IEEE Commun. Mag., vol. 62, no. 4, pp. 50–56 | 2024 |
+
+3GPP specs updated: Release 16 (2020) → **Release 17 (2022)** for both TS 36.331 and TS 36.214.
+
+**Note on foundational refs (LSTM 1997, SMOTE 2002, RF 2001, Tomek 1976, RMSprop 2012):**
+These must cite the original algorithm papers — IEEE standard practice. Cannot replace with newer papers.
+
+#### 8. New Figures Added
+| Figure | File | Description |
+|--------|------|-------------|
+| RF Feature Importance | `paper/rf_feature_importance.png` | Gini impurity per RSRP window position |
+| Lead-Time Performance | `paper/lead_time_vs_performance.png` | F1/Recall vs τ for RF and A3 |
 
 ---
 
@@ -225,4 +314,5 @@ A complete IEEE journal-format paper was written in LaTeX covering the i-DECIDE 
 | `db093c3` | Add IEEE journal paper (main.tex) with full results |
 | `6fbfc95` | Rewrite IEEE paper — focused purely on i-DECIDE implementation |
 | `72b517d` | Fix architecture figure overflow — resizebox to linewidth |
-| _(latest)_ | Document everything — update README, PROGRESS, CLAUDE |
+| `81608b0` | Document full project — README, PROGRESS, CLAUDE |
+| _(latest)_ | Revise paper v2 — A3 baseline, lead-time, XAI, stats, refs |

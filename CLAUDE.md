@@ -89,12 +89,14 @@ Implements the i-DECIDE two-stage deep learning handover prediction architecture
 
 **Best model: Random Forest** — highest accuracy and recall; only 17.5 missed HO events per fold.
 
-## Paper (completed 2026-06-17)
-- File: `paper/main.tex` — complete IEEE Transactions-format paper
+## Paper (v1: 2026-06-17 | v2 revised: 2026-06-23)
+- File: `paper/main.tex` — complete IEEE Transactions-format paper (v2 revised)
 - Sections: Introduction, Dataset, i-DECIDE Architecture, Experimental Setup, Results, Conclusion
-- Figures: TikZ architecture diagram, pgfplots classifier bar chart, 2 PNG result figures
+- Figures: TikZ architecture diagram, RF feature importance PNG, lead-time PNG, 2 LSTM result PNGs
 - Known fix: architecture TikZ figure wrapped in `\resizebox{\linewidth}{!}` to prevent overflow
-- Compile: upload `paper/` folder (3 files) to Overleaf → Compile
+- Compile: upload `paper/` folder to Overleaf → Compile
+- v2 changes: A3 baseline added, lead-time table, statistical significance CIs, XAI section,
+  limitations paragraph (SMOTE leakage), contributions 4→6, references 8→11 (3 new 2022-2024 refs)
 
 ## GPU Setup Status — Resolved
 - Hardware: NVIDIA RTX 4050 Laptop, 6 GB VRAM, CUDA 13.0 driver
